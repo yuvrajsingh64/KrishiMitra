@@ -1,7 +1,7 @@
 import { Bell, Key, Layout, User, Save, Check, Eye, EyeOff, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -72,10 +72,9 @@ export default function Settings() {
     setProfileSaving(true);
     setProfileError('');
     try {
-      const { data } = await axios.put(
-        'http://localhost:5000/api/auth/profile',
-        { name: profileName, email: profileEmail },
-        { headers: { Authorization: `Bearer ${user.token}` } }
+      const { data } = await api.put(
+        '/api/auth/profile',
+        { name: profileName, email: profileEmail }
       );
       const updatedUser = { ...user, name: data.name, email: data.email };
       localStorage.setItem('userInfo', JSON.stringify(updatedUser));
@@ -105,10 +104,9 @@ export default function Settings() {
     setPasswordSaving(true);
     setPasswordMsg({ text: '', type: '' });
     try {
-      await axios.put(
-        'http://localhost:5000/api/auth/password',
-        { currentPassword, newPassword },
-        { headers: { Authorization: `Bearer ${user.token}` } }
+      await api.put(
+        '/api/auth/password',
+        { currentPassword, newPassword }
       );
       setPasswordMsg({ text: 'Password updated successfully!', type: 'success' });
       setCurrentPassword('');

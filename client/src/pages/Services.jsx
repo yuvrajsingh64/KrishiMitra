@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Search, Filter, Tractor, Compass, Droplets, MapPin, Star, AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -25,7 +25,7 @@ export default function Services() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/services');
+        const { data } = await api.get('/api/services');
         setServices(data);
       } catch (err) {
         setError(err.response?.data?.message || err.message);
@@ -77,14 +77,12 @@ export default function Services() {
       handler: async (response) => {
         // Payment success — verify on backend
         try {
-          await axios.post('http://localhost:5000/api/payments/verify', {
+          await api.post('/api/payments/verify', {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
             bookingId: bookingData.bookingId,
             paymentId: orderData.paymentId,
-          }, {
-            headers: { Authorization: `Bearer ${user.token}` }
           });
           setBookingStatus(prev => ({ ...prev, [bookingData.serviceId]: 'paid' }));
           setTimeout(() => setBookingStatus(prev => ({ ...prev, [bookingData.serviceId]: null })), 4000);
@@ -142,12 +140,10 @@ export default function Services() {
 
   const handleDemoPayment = async (orderData, bookingData) => {
     try {
-      await axios.post('http://localhost:5000/api/payments/verify', {
+      await api.post('/api/payments/verify', {
         bookingId: bookingData.bookingId,
         paymentId: orderData.paymentId,
         demoMode: true,
-      }, {
-        headers: { Authorization: `Bearer ${user.token}` }
       });
       setBookingStatus(prev => ({ ...prev, [bookingData.serviceId]: 'paid' }));
       setTimeout(() => setBookingStatus(prev => ({ ...prev, [bookingData.serviceId]: null })), 4000);
@@ -163,22 +159,20 @@ export default function Services() {
       setBookingStatus(prev => ({ ...prev, [serviceId]: 'loading' }));
       
       // Step 1: Create booking
-      const { data: booking } = await axios.post(
-        'http://localhost:5000/api/bookings', 
+      const { data: booking } = await api.post(
+        '/api/bookings', 
         { 
           serviceId, 
           scheduledDate: new Date(Date.now() + 86400000),
           notes: 'Standard Booking',
           totalAmount: price
         },
-        { headers: { Authorization: `Bearer ${user.token}` } }
       );
 
       // Step 2: Create payment order
-      const { data: orderData } = await axios.post(
-        'http://localhost:5000/api/payments/order',
+      const { data: orderData } = await api.post(
+        '/api/payments/order',
         { bookingId: booking._id },
-        { headers: { Authorization: `Bearer ${user.token}` } }
       );
 
       const bookingData = { bookingId: booking._id, serviceId, serviceName };

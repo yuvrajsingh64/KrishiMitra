@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Activity, Clock, CheckCircle, DollarSign, XCircle, AlertCircle, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -15,9 +15,7 @@ export default function ProviderDashboard() {
 
   const fetchBookings = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/bookings', {
-        headers: { Authorization: `Bearer ${user?.token}` }
-      });
+      const { data } = await api.get('/api/bookings');
       setBookings(data);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -33,10 +31,9 @@ export default function ProviderDashboard() {
   const handleStatusUpdate = async (bookingId, status) => {
     setActionLoading(prev => ({ ...prev, [bookingId]: status }));
     try {
-      await axios.put(
-        `http://localhost:5000/api/bookings/${bookingId}/status`,
-        { status },
-        { headers: { Authorization: `Bearer ${user.token}` } }
+      await api.put(
+        `/api/bookings/${bookingId}/status`,
+        { status }
       );
       // Refresh bookings list
       await fetchBookings();

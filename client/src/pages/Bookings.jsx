@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Calendar, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, Phone, Mail, CreditCard } from 'lucide-react';
@@ -60,9 +60,7 @@ export default function Bookings() {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/bookings', {
-          headers: { Authorization: `Bearer ${user?.token}` }
-        });
+        const { data } = await api.get('/api/bookings');
         setBookings(data);
       } catch (err) {
         console.error(err);
@@ -195,18 +193,17 @@ export default function Bookings() {
                             onClick={async (e) => {
                               e.stopPropagation();
                               try {
-                                const { data: orderData } = await axios.post(
-                                  'http://localhost:5000/api/payments/order',
-                                  { bookingId: booking._id },
-                                  { headers: { Authorization: `Bearer ${user.token}` } }
+                                const { data: orderData } = await api.post(
+                                  '/api/payments/order',
+                                  { bookingId: booking._id }
                                 );
 
                                 if (orderData.mode === 'demo') {
-                                  await axios.post('http://localhost:5000/api/payments/verify', {
+                                  await api.post('/api/payments/verify', {
                                     bookingId: booking._id,
                                     paymentId: orderData.paymentId,
                                     demoMode: true,
-                                  }, { headers: { Authorization: `Bearer ${user.token}` } });
+                                  });
                                   // Update local state
                                   setBookings(prev => prev.map(b => 
                                     b._id === booking._id ? { ...b, paymentStatus: 'paid' } : b
@@ -221,13 +218,13 @@ export default function Bookings() {
                                     image: 'https://img.icons8.com/color/96/plant-under-sun.png',
                                     order_id: orderData.orderId,
                                     handler: async (response) => {
-                                      await axios.post('http://localhost:5000/api/payments/verify', {
+                                      await api.post('/api/payments/verify', {
                                         razorpay_order_id: response.razorpay_order_id,
                                         razorpay_payment_id: response.razorpay_payment_id,
                                         razorpay_signature: response.razorpay_signature,
                                         bookingId: booking._id,
                                         paymentId: orderData.paymentId,
-                                      }, { headers: { Authorization: `Bearer ${user.token}` } });
+                                      });
                                       setBookings(prev => prev.map(b => 
                                         b._id === booking._id ? { ...b, paymentStatus: 'paid' } : b
                                       ));

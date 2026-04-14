@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import io from 'socket.io-client';
+import { API_URL } from '../config/api';
 
-const socket = io('http://localhost:5000');
+const socket = io(API_URL);
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

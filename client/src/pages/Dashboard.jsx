@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Activity, Clock, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import ProviderDashboard from './ProviderDashboard';
@@ -21,9 +21,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/bookings', {
-          headers: { Authorization: `Bearer ${user?.token}` }
-        });
+        const { data } = await api.get('/api/bookings');
         setBookings(data);
       } catch (err) {
         setError(err.response?.data?.message || err.message);

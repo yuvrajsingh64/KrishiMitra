@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, MapPin, Star, X, Package } from 'lucide-react';
-import axios from 'axios';
+import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = ['Machinery', 'Irrigation', 'Advanced', 'Pesticide', 'Labor', 'Transport'];
@@ -23,9 +23,7 @@ export default function ManageServices() {
 
   const fetchServices = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/services/mine', {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
+      const { data } = await api.get('/api/services/mine');
       setServices(data);
     } catch (err) {
       console.error(err);
@@ -47,11 +45,9 @@ export default function ManageServices() {
     setFormLoading(true);
     setFormError('');
     try {
-      await axios.post('http://localhost:5000/api/services', {
+      await api.post('/api/services', {
         ...form,
         price: Number(form.price)
-      }, {
-        headers: { Authorization: `Bearer ${user.token}` }
       });
       setForm({ title: '', description: '', category: 'Machinery', price: '', priceUnit: 'hr', location: '', mobileNumber: '' });
       setShowForm(false);
@@ -67,9 +63,7 @@ export default function ManageServices() {
     if (!confirm('Are you sure you want to delete this service?')) return;
     setDeleting(prev => ({ ...prev, [id]: true }));
     try {
-      await axios.delete(`http://localhost:5000/api/services/${id}`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
+      await api.delete(`/api/services/${id}`);
       await fetchServices();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete');

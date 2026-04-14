@@ -4,7 +4,7 @@ import { Sprout, Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
+import api from '../config/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -26,7 +26,7 @@ export default function Login() {
   const handleGoogleSuccess = async (credentialResponse) => {
     setGoogleError('');
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/google', {
+      const { data } = await api.post('/api/auth/google', {
         credential: credentialResponse.credential,
         role: 'farmer'
       });

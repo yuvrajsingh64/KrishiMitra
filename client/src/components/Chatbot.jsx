@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function Chatbot() {
@@ -38,10 +38,8 @@ export default function Chatbot() {
     }
 
     try {
-      const { data } = await axios.post('http://localhost:5000/api/ai/chat', {
+      const { data } = await api.post('/api/ai/chat', {
         prompt: userMessage
-      }, {
-        headers: { Authorization: `Bearer ${user.token}` }
       });
       
       setMessages(prev => [...prev, { role: 'ai', text: data.text }]);

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Sprout, ArrowRight, Shield, Bot, Calendar, MapPin, Star, ChevronRight, Tractor, Droplets, Compass } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 
 const iconMap = { Tractor, Compass, Droplets };
 
@@ -10,7 +10,7 @@ export default function LandingPage() {
   const [services, setServices] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/services')
+    api.get('/api/services')
       .then(res => setServices(res.data.slice(0, 3)))
       .catch(() => {});
   }, []);
