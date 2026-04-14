@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0f172a;
+  --color-foreground: #f8fafc;
+  --color-card: #1e293b;
+  --color-card-foreground: #f8fafc;
+  --color-primary: #10b981;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #3b82f6;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #334155;
+  --color-muted-foreground: #94a3b8;
+  --color-accent: #f59e0b;
+  --color-accent-foreground: #ffffff;
+  --color-border: #334155;
+  
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+
+  --font-sans: 'Inter', sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: var(--color-background);
+    --foreground: var(--color-foreground);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+
+  /* ─── Light Theme Overrides ─── */
+  html.light body {
+    --background: #f0fdf4;
+    --foreground: #1e293b;
+    background-color: #f0fdf4;
+    color: #1e293b;
+  }
+
+  html.light .glass {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border-color: rgba(16, 185, 129, 0.25) !important;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Sidebar */
+  html.light aside {
+    background: linear-gradient(180deg, #ecfdf5, #d1fae5) !important;
+    border-color: #a7f3d0 !important;
+  }
+
+  html.light aside a,
+  html.light aside button {
+    color: #334155 !important;
+  }
+
+  html.light aside a:hover,
+  html.light aside a.active-link {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #059669 !important;
+  }
+
+  /* Header bar */
+  html.light header,
+  html.light nav {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border-color: #d1fae5 !important;
+    color: #1e293b !important;
+  }
+
+  /* Cards & inputs */
+  html.light [class*="bg-slate-800"] {
+    background-color: #ffffff !important;
+    border-color: #d1fae5 !important;
+    color: #1e293b !important;
+  }
+
+  html.light [class*="border-slate-700"] {
+    border-color: #d1fae5 !important;
+  }
+
+  html.light .text-slate-100,
+  html.light .text-slate-50 {
+    color: #1e293b !important;
+  }
+
+  html.light .text-slate-300 {
+    color: #475569 !important;
+  }
+  
+  html.light .text-slate-400 {
+    color: #64748b !important;
+  }
+
+  html.light .text-slate-500 {
+    color: #94a3b8 !important;
+  }
+
+  html.light .text-slate-200 {
+    color: #334155 !important;
+  }
+
+  /* Overrides for main bg blocks */
+  html.light .bg-slate-900 {
+    background-color: #f8fafc !important;
+  }
+
+  html.light .bg-slate-900\/95 {
+    background-color: rgba(248, 250, 252, 0.95) !important;
+  }
+
+  /* Keep emerald/green elements vivid */
+  html.light .text-emerald-400 {
+    color: #059669 !important;
+  }
+
+  html.light .bg-emerald-500 {
+    background-color: #059669 !important;
+  }
+
+  html.light .from-emerald-400 {
+    --tw-gradient-from: #059669 !important;
+  }
+
+  html.light .to-cyan-400 {
+    --tw-gradient-to: #0891b2 !important;
+  }
+
+  /* Select inputs */
+  html.light select {
+    background-color: #f1f5f9 !important;
+    color: #334155 !important;
+    border-color: #d1fae5 !important;
+  }
+
+  /* Smooth transitions on ALL theme-affected elements */
+  *, *::before, *::after {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
