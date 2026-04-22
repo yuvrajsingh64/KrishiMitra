@@ -1,25 +1,36 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Sprout, Mail, Lock, User, UserCog, ArrowRight, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ReCAPTCHA from 'react-google-recaptcha';
+
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
 
 export default function Register() {
   const [role, setRole] = useState('farmer');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [captchaToken, setCaptchaToken] = useState(null);
   
   const { register, loading, error } = useAuth();
   const navigate = useNavigate();
+  const captchaRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (RECAPTCHA_SITE_KEY && !captchaToken) {
+      return; // Don't submit without CAPTCHA
+    }
     try {
-      await register(name, email, password, role);
+      await register(name, email, password, role, captchaToken);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
+      // Reset captcha on error so user can retry
+      captchaRef.current?.reset();
+      setCaptchaToken(null);
     }
   };
 
@@ -114,9 +125,22 @@ export default function Register() {
             </div>
           </div>
 
+          {/* reCAPTCHA Widget */}
+          {RECAPTCHA_SITE_KEY && (
+            <div className="flex justify-center py-2">
+              <ReCAPTCHA
+                ref={captchaRef}
+                sitekey={RECAPTCHA_SITE_KEY}
+                theme="dark"
+                onChange={(token) => setCaptchaToken(token)}
+                onExpired={() => setCaptchaToken(null)}
+              />
+            </div>
+          )}
+
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={loading || (RECAPTCHA_SITE_KEY && !captchaToken)}
             className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 group mt-4 relative overflow-hidden"
           >
             {loading ? <Loader className="animate-spin" size={20} /> : (

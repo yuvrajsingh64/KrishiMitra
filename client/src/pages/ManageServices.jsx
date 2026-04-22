@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, MapPin, Star, X, Package } from 'lucide-react';
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 const CATEGORIES = ['Machinery', 'Irrigation', 'Advanced', 'Pesticide', 'Labor', 'Transport'];
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
 
 export default function ManageServices() {
   const { user } = useAuth();
@@ -12,6 +14,8 @@ export default function ManageServices() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [deleting, setDeleting] = useState({});
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const captchaRef = useRef(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -42,18 +46,28 @@ export default function ManageServices() {
       setFormError('Title, price, and location are required.');
       return;
     }
+    if (RECAPTCHA_SITE_KEY && !captchaToken) {
+      setFormError('Please complete the CAPTCHA verification.');
+      return;
+    }
     setFormLoading(true);
     setFormError('');
     try {
       await api.post('/api/services', {
         ...form,
-        price: Number(form.price)
+        price: Number(form.price),
+        captchaToken
       });
       setForm({ title: '', description: '', category: 'Machinery', price: '', priceUnit: 'hr', location: '', mobileNumber: '' });
+      setCaptchaToken(null);
+      captchaRef.current?.reset();
       setShowForm(false);
       await fetchServices();
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to create service');
+      // Reset captcha on error so user can retry
+      captchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setFormLoading(false);
     }
@@ -147,8 +161,22 @@ export default function ManageServices() {
                   className="w-full bg-slate-800/60 text-slate-100 border border-slate-700 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500 text-sm" />
               </div>
             </div>
+
+            {/* reCAPTCHA Widget */}
+            {RECAPTCHA_SITE_KEY && (
+              <div className="flex justify-center py-2">
+                <ReCAPTCHA
+                  ref={captchaRef}
+                  sitekey={RECAPTCHA_SITE_KEY}
+                  theme="dark"
+                  onChange={(token) => setCaptchaToken(token)}
+                  onExpired={() => setCaptchaToken(null)}
+                />
+              </div>
+            )}
+
             {formError && <p className="text-red-400 text-xs">{formError}</p>}
-            <button type="submit" disabled={formLoading}
+            <button type="submit" disabled={formLoading || (RECAPTCHA_SITE_KEY && !captchaToken)}
               className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium transition-all disabled:opacity-50">
               {formLoading ? 'Creating...' : 'Create Service'}
             </button>

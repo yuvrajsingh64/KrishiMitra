@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { registerUser, loginUser, googleLogin, getUserProfile, updateProfile, changePassword } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const { verifyCaptcha } = require('../middleware/captchaMiddleware');
 
-router.post('/register', registerUser);
+router.post('/register', verifyCaptcha, registerUser);
 router.post('/login', loginUser);
 router.post('/google', googleLogin);
 router.get('/profile', protect, getUserProfile);

@@ -35,11 +35,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password, role) => {
+  const register = async (name, email, password, role, captchaToken) => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.post(`${API_URL}/register`, { name, email, password, role });
+      const { data } = await api.post(`${API_URL}/register`, { name, email, password, role, captchaToken });
       setUser(data);
       localStorage.setItem('userInfo', JSON.stringify(data));
       setLoading(false);
