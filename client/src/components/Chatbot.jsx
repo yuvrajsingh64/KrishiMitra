@@ -218,11 +218,11 @@ export default function Chatbot() {
         sessionId,
       });
 
-      // Update conversation history for context
+      // Update conversation history for context (OpenAI format for Groq)
       setConversationHistory(prev => [
         ...prev,
-        { role: 'user', parts: [{ text: userMessage }] },
-        { role: 'model', parts: [{ text: data.text }] },
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: data.text },
       ].slice(-10)); // Keep last 10 messages for context
 
       setMessages(prev => [...prev, {

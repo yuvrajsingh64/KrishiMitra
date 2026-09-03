@@ -3,72 +3,90 @@ const AgentLog = require('../models/AgentLog');
 const { searchServices, bookService, checkBookingStatus, getMyBookings } = require('../tools/serviceTools');
 const { createPaymentLink, processRefund } = require('../tools/paymentTools');
 
-// ── Tool Definitions for Gemini Function Calling ──
-const TOOL_DECLARATIONS = [
+// ── Tool Definitions (OpenAI format for Groq) ──
+const TOOLS = [
   {
-    name: 'search_services',
-    description: 'Search for agricultural services available on KrishiMitra. Use this when a farmer asks about available services, machinery, irrigation, pesticide, labor, transport, or wants to find a specific type of service in a location.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        query: { type: 'STRING', description: 'Search keyword (e.g., tractor, drone, sprayer, plowing)' },
-        category: { type: 'STRING', description: 'Service category. One of: Machinery, Irrigation, Advanced, Pesticide, Labor, Transport, All', enum: ['Machinery', 'Irrigation', 'Advanced', 'Pesticide', 'Labor', 'Transport', 'All'] },
-        location: { type: 'STRING', description: 'Location to search near (e.g., Nagpur, Mumbai, Delhi)' },
+    type: 'function',
+    function: {
+      name: 'search_services',
+      description: 'Search for agricultural services available on KrishiMitra. Use this when a farmer asks about available services, machinery, irrigation, pesticide, labor, transport, or wants to find a specific type of service in a location.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search keyword (e.g., tractor, drone, sprayer, plowing)' },
+          category: { type: 'string', description: 'Service category', enum: ['Machinery', 'Irrigation', 'Advanced', 'Pesticide', 'Labor', 'Transport', 'All'] },
+          location: { type: 'string', description: 'Location to search near (e.g., Nagpur, Mumbai, Delhi)' },
+        },
       },
     },
   },
   {
-    name: 'book_service',
-    description: 'Book an agricultural service for the farmer. Only use this AFTER the farmer has confirmed they want to book a specific service. Always confirm with the farmer before calling this.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        serviceId: { type: 'STRING', description: 'The _id of the service to book' },
-        scheduledDate: { type: 'STRING', description: 'The date for the service in ISO format (YYYY-MM-DD)' },
-        notes: { type: 'STRING', description: 'Any additional notes from the farmer' },
+    type: 'function',
+    function: {
+      name: 'book_service',
+      description: 'Book an agricultural service for the farmer. Only use this AFTER the farmer has confirmed they want to book a specific service. Always confirm with the farmer before calling this.',
+      parameters: {
+        type: 'object',
+        properties: {
+          serviceId: { type: 'string', description: 'The _id of the service to book' },
+          scheduledDate: { type: 'string', description: 'The date for the service in ISO format (YYYY-MM-DD)' },
+          notes: { type: 'string', description: 'Any additional notes from the farmer' },
+        },
+        required: ['serviceId', 'scheduledDate'],
       },
-      required: ['serviceId', 'scheduledDate'],
     },
   },
   {
-    name: 'create_payment_link',
-    description: 'Generate a Razorpay payment link for a booking so the farmer can pay. Only call this AFTER a booking has been created and the farmer wants to pay.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        bookingId: { type: 'STRING', description: 'The _id of the booking to create payment for' },
+    type: 'function',
+    function: {
+      name: 'create_payment_link',
+      description: 'Generate a Razorpay payment link for a booking so the farmer can pay. Only call this AFTER a booking has been created and the farmer wants to pay.',
+      parameters: {
+        type: 'object',
+        properties: {
+          bookingId: { type: 'string', description: 'The _id of the booking to create payment for' },
+        },
+        required: ['bookingId'],
       },
-      required: ['bookingId'],
     },
   },
   {
-    name: 'check_booking_status',
-    description: 'Check the status of a specific booking including payment status.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        bookingId: { type: 'STRING', description: 'The _id of the booking to check' },
+    type: 'function',
+    function: {
+      name: 'check_booking_status',
+      description: 'Check the status of a specific booking including payment status.',
+      parameters: {
+        type: 'object',
+        properties: {
+          bookingId: { type: 'string', description: 'The _id of the booking to check' },
+        },
+        required: ['bookingId'],
       },
-      required: ['bookingId'],
     },
   },
   {
-    name: 'get_my_bookings',
-    description: 'Get the farmer\'s recent bookings list. Use when the farmer asks about their bookings, orders, or payment history.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
+    type: 'function',
+    function: {
+      name: 'get_my_bookings',
+      description: "Get the farmer's recent bookings list. Use when the farmer asks about their bookings, orders, or payment history.",
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
     },
   },
   {
-    name: 'request_refund',
-    description: 'Request a refund for a paid booking. Only use when the farmer explicitly asks for a refund and the booking has been paid. Always confirm the amount with the farmer first.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        bookingId: { type: 'STRING', description: 'The _id of the booking to refund' },
+    type: 'function',
+    function: {
+      name: 'request_refund',
+      description: 'Request a refund for a paid booking. Only use when the farmer explicitly asks for a refund and the booking has been paid. Always confirm the amount with the farmer first.',
+      parameters: {
+        type: 'object',
+        properties: {
+          bookingId: { type: 'string', description: 'The _id of the booking to refund' },
+        },
+        required: ['bookingId'],
       },
-      required: ['bookingId'],
     },
   },
 ];
@@ -85,7 +103,7 @@ const SYSTEM_PROMPT = `You are Krishi Mitra AI Agent, an intelligent agricultura
 IMPORTANT RULES:
 - Always search for services first before trying to book anything.
 - ALWAYS ask for confirmation before booking a service or processing a payment. Say something like "Should I proceed with booking [service] for ₹[amount] on [date]?"
-- ALWAYS ask for confirmation before processing a refund. Say "Are you sure you want to refund ₹[amount] for booking [id]?"
+- ALWAYS ask for confirmation before processing a refund.
 - When presenting services, format them clearly with title, price, location, and rating.
 - When a payment link is created, prominently display it so the farmer can click and pay.
 - Keep responses conversational, helpful, and concise.
@@ -100,48 +118,35 @@ async function executeTool(toolName, args, userId, userInfo) {
   switch (toolName) {
     case 'search_services':
       return await searchServices(args);
-
     case 'book_service':
-      return await bookService({
-        ...args,
-        farmerId: userId,
-      });
-
+      return await bookService({ ...args, farmerId: userId });
     case 'create_payment_link':
       return await createPaymentLink({
         bookingId: args.bookingId,
         farmerName: userInfo?.name || 'Farmer',
         farmerEmail: userInfo?.email || '',
       });
-
     case 'check_booking_status':
       return await checkBookingStatus(args);
-
     case 'get_my_bookings':
       return await getMyBookings({ farmerId: userId });
-
     case 'request_refund':
       return await processRefund(args);
-
     default:
       return { error: `Unknown tool: ${toolName}` };
   }
 }
 
-// ── Gemini Function Calling Loop ──
+// ── Groq Tool-Calling Loop ──
 async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) throw new Error('GROQ_API_KEY not configured');
 
-  const model = 'gemini-3.6-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-  // Build contents array with conversation history
-  const contents = [
-    { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
-    { role: 'model', parts: [{ text: 'I am Krishi Mitra AI Agent, ready to help you with agricultural services, bookings, payments, and farm advice. How can I assist you today?' }] },
+  // Build messages array
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
     ...conversationHistory,
-    { role: 'user', parts: [{ text: userMessage }] },
+    { role: 'user', content: userMessage },
   ];
 
   const toolCalls = [];
@@ -149,76 +154,87 @@ async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) 
   const MAX_ITERATIONS = 5;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const response = await axios.post(url, {
-      contents,
-      tools: [{ functionDeclarations: TOOL_DECLARATIONS }],
-      generationConfig: {
-        maxOutputTokens: 1200,
-        temperature: 0.7,
-      },
+    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'qwen/qwen3.8-27b',
+      messages,
+      tools: TOOLS,
+      tool_choice: 'auto',
+      max_tokens: 1200,
+      temperature: 0.7,
     }, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${groqKey}`,
+        'Content-Type': 'application/json',
+      },
       timeout: 30000,
     });
 
-    const candidate = response.data?.candidates?.[0];
-    const parts = candidate?.content?.parts || [];
+    const choice = response.data?.choices?.[0];
+    const assistantMessage = choice?.message;
 
-    // Check if model wants to call a function
-    const functionCallPart = parts.find(p => p.functionCall);
+    if (!assistantMessage) break;
 
-    if (functionCallPart) {
-      const { name, args } = functionCallPart.functionCall;
+    // Check if model wants to call tools
+    if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+      // Add the assistant's message (with tool_calls) to history
+      messages.push(assistantMessage);
 
-      // Execute the tool
-      let result;
-      try {
-        result = await executeTool(name, args || {}, userId, userInfo);
-      } catch (err) {
-        result = { error: err.message };
+      // Execute each tool call
+      for (const tc of assistantMessage.tool_calls) {
+        const fnName = tc.function.name;
+        let fnArgs = {};
+        try {
+          fnArgs = JSON.parse(tc.function.arguments || '{}');
+        } catch (e) {
+          fnArgs = {};
+        }
+
+        let result;
+        try {
+          result = await executeTool(fnName, fnArgs, userId, userInfo);
+        } catch (err) {
+          result = { error: err.message };
+        }
+
+        // Track the tool call for audit
+        toolCalls.push({
+          tool: fnName,
+          args: fnArgs,
+          result,
+          timestamp: new Date(),
+        });
+
+        // Track response data for frontend rendering
+        if (fnName === 'search_services' && Array.isArray(result)) {
+          responseData = { type: 'services', services: result };
+        } else if (fnName === 'book_service' && result?.success) {
+          responseData = { type: 'booking', booking: result.booking };
+        } else if (fnName === 'create_payment_link' && result?.success) {
+          responseData = { type: 'payment_link', paymentLink: result.paymentLink };
+        } else if (fnName === 'check_booking_status' && result?.success) {
+          responseData = { type: 'booking_status', booking: result.booking };
+        } else if (fnName === 'get_my_bookings') {
+          responseData = { type: 'bookings_list', bookings: result };
+        } else if (fnName === 'request_refund' && result?.success) {
+          responseData = { type: 'refund', refund: result.refund };
+        }
+
+        // Add tool result to messages
+        messages.push({
+          role: 'tool',
+          tool_call_id: tc.id,
+          content: JSON.stringify(result),
+        });
       }
 
-      // Track the tool call for audit
-      toolCalls.push({
-        tool: name,
-        args: args || {},
-        result,
-        timestamp: new Date(),
-      });
-
-      // Track response data for frontend rendering
-      if (name === 'search_services' && Array.isArray(result)) {
-        responseData = { type: 'services', services: result };
-      } else if (name === 'book_service' && result?.success) {
-        responseData = { type: 'booking', booking: result.booking };
-      } else if (name === 'create_payment_link' && result?.success) {
-        responseData = { type: 'payment_link', paymentLink: result.paymentLink };
-      } else if (name === 'check_booking_status' && result?.success) {
-        responseData = { type: 'booking_status', booking: result.booking };
-      } else if (name === 'get_my_bookings') {
-        responseData = { type: 'bookings_list', bookings: result };
-      } else if (name === 'request_refund' && result?.success) {
-        responseData = { type: 'refund', refund: result.refund };
-      }
-
-      // Add model's exact response (which includes functionCall and possible thought_signature)
-      contents.push(candidate.content);
-      const formattedResponse = Array.isArray(result) ? { items: result } : (result || { status: 'success' });
-
-      contents.push({
-        role: 'user',
-        parts: [{ functionResponse: { name, response: formattedResponse } }],
-      });
-
-      // Continue loop — model may want to call another tool or respond
+      // Continue loop — model may want to call more tools or respond with text
       continue;
     }
 
     // Model returned text — we're done
-    const textPart = parts.find(p => p.text);
-    if (textPart) {
+    if (assistantMessage.content) {
       return {
-        text: textPart.text,
+        text: assistantMessage.content,
         toolCalls,
         responseData,
       };
@@ -226,14 +242,14 @@ async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) 
   }
 
   return {
-    text: 'I processed your request but couldn\'t generate a complete response. Please try again.',
+    text: "I processed your request but couldn't generate a complete response. Please try again.",
     toolCalls,
     responseData,
   };
 }
 
 // ── API Handler ──
-// @desc    AI Agent chat with function calling
+// @desc    AI Agent chat with tool calling
 // @route   POST /api/agent/chat
 // @access  Private
 const agentChat = async (req, res) => {
@@ -245,11 +261,21 @@ const agentChat = async (req, res) => {
   }
 
   try {
+    // Convert frontend conversation history to OpenAI message format
+    const formattedHistory = conversationHistory.map(msg => {
+      if (msg.role === 'user') {
+        return { role: 'user', content: msg.parts?.[0]?.text || msg.content || '' };
+      } else if (msg.role === 'model' || msg.role === 'assistant') {
+        return { role: 'assistant', content: msg.parts?.[0]?.text || msg.content || '' };
+      }
+      return null;
+    }).filter(Boolean);
+
     const result = await runAgentLoop(
       message.trim(),
       req.user._id.toString(),
       { name: req.user.name, email: req.user.email },
-      conversationHistory
+      formattedHistory
     );
 
     // Log the interaction for audit
@@ -261,7 +287,7 @@ const agentChat = async (req, res) => {
         toolCalls: result.toolCalls,
         agentResponse: result.text,
         responseData: result.responseData,
-        provider: 'gemini',
+        provider: 'groq',
         durationMs: Date.now() - startTime,
       });
     } catch (logErr) {
@@ -272,13 +298,11 @@ const agentChat = async (req, res) => {
       text: result.text,
       toolCalls: result.toolCalls,
       data: result.responseData,
-      provider: 'gemini',
+      provider: 'groq',
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
     console.error('[Agent] Error:', error.response?.data || error.message);
-
-    // Fallback to basic chat if function calling fails
     return res.status(500).json({
       message: 'The AI agent encountered an error. Please try again.',
       error: error.message,
@@ -295,7 +319,6 @@ const getAgentLogs = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50)
       .select('userMessage agentResponse toolCalls durationMs createdAt');
-
     res.json(logs);
   } catch (error) {
     res.status(500).json({ message: error.message });
