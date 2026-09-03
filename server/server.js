@@ -10,6 +10,7 @@ const serviceRoutes = require('./routes/serviceRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const agentRoutes = require('./routes/agentRoutes');
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/agent', agentRoutes);
 
 // Basic Route
 app.get('/api/health', (req, res) => {
