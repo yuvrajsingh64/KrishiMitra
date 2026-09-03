@@ -234,9 +234,12 @@ export default function Chatbot() {
         { role: 'assistant', content: assistantContent },
       ].slice(-10)); // Keep last 10 messages for context
 
+      // Clean the displayed text — remove any context blocks the model might echo back
+      const cleanText = (data.text || '').replace(/\n*\[CONTEXT FOR NEXT TURN[\s\S]*$/i, '').trim();
+
       setMessages(prev => [...prev, {
         role: 'ai',
-        text: data.text,
+        text: cleanText,
         toolCalls: data.toolCalls,
         data: data.data,
       }]);

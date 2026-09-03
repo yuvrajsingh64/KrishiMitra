@@ -78,10 +78,13 @@ async function createPaymentLink({ bookingId, farmerName, farmerEmail }) {
       payment.razorpayOrderId = paymentLink.id;
       await payment.save();
 
+      const linkUrl = paymentLink.short_url || paymentLink.upi_link || `https://rzp.io/i/${paymentLink.id}`;
+      console.log('[PaymentTools] Payment link created:', linkUrl, '| ID:', paymentLink.id);
+
       return {
         success: true,
         paymentLink: {
-          url: paymentLink.short_url,
+          url: linkUrl,
           amount: booking.totalAmount,
           currency: 'INR',
           id: paymentLink.id,
@@ -91,8 +94,8 @@ async function createPaymentLink({ bookingId, farmerName, farmerEmail }) {
         },
       };
     } catch (err) {
-      console.error('[PaymentTools] Razorpay Payment Link error:', err.message);
-      return { success: false, error: `Payment link creation failed: ${err.message}` };
+      console.error('[PaymentTools] Razorpay Payment Link error:', err.error || err.message);
+      return { success: false, error: `Payment link creation failed: ${err.error?.description || err.message}` };
     }
   } else {
     // Demo mode
