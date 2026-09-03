@@ -308,7 +308,7 @@ export default function Chatbot() {
                   <h3 className="font-semibold text-sm">Krishi Mitra AI Agent</h3>
                   <p className="text-[10px] text-emerald-100 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse"></span>
-                    Powered by Gemini + Razorpay
+                    Powered by AI + Razorpay
                   </p>
                 </div>
               </div>

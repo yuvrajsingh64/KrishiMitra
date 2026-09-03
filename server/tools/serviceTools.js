@@ -52,35 +52,58 @@ async function searchServices({ query, category, location }) {
  * Create a booking for a farmer.
  */
 async function bookService({ serviceId, farmerId, scheduledDate, notes }) {
-  const service = await Service.findById(serviceId).populate('provider', 'name');
+  try {
+    if (!serviceId) return { success: false, error: 'Service ID is required' };
+    if (!scheduledDate) return { success: false, error: 'Scheduled date is required' };
 
-  if (!service) {
-    return { success: false, error: 'Service not found' };
+    const service = await Service.findById(serviceId).populate('provider', 'name');
+
+    if (!service) {
+      return { success: false, error: 'Service not found. Please search for services first.' };
+    }
+
+    if (!service.provider) {
+      return { success: false, error: 'Service provider not available.' };
+    }
+
+    // Robust date parsing
+    let parsedDate = new Date(scheduledDate);
+    if (isNaN(parsedDate.getTime())) {
+      // Try common formats like "5 sep", "sep 5", "5 september 2026"
+      const currentYear = new Date().getFullYear();
+      parsedDate = new Date(`${scheduledDate} ${currentYear}`);
+    }
+    if (isNaN(parsedDate.getTime())) {
+      return { success: false, error: `Could not parse date: "${scheduledDate}". Please use YYYY-MM-DD format.` };
+    }
+
+    const booking = await Booking.create({
+      service: service._id,
+      farmer: farmerId,
+      provider: service.provider._id,
+      scheduledDate: parsedDate,
+      notes: notes || '',
+      totalAmount: service.price,
+      status: 'pending',
+      paymentStatus: 'pending',
+    });
+
+    return {
+      success: true,
+      booking: {
+        _id: booking._id.toString(),
+        service: service.title,
+        provider: service.provider.name,
+        amount: service.price,
+        priceUnit: service.priceUnit,
+        scheduledDate: booking.scheduledDate.toISOString(),
+        status: booking.status,
+      },
+    };
+  } catch (err) {
+    console.error('[bookService] Error:', err.message);
+    return { success: false, error: `Booking failed: ${err.message}` };
   }
-
-  const booking = await Booking.create({
-    service: service._id,
-    farmer: farmerId,
-    provider: service.provider._id,
-    scheduledDate: new Date(scheduledDate),
-    notes: notes || '',
-    totalAmount: service.price,
-    status: 'pending',
-    paymentStatus: 'pending',
-  });
-
-  return {
-    success: true,
-    booking: {
-      _id: booking._id.toString(),
-      service: service.title,
-      provider: service.provider.name,
-      amount: service.price,
-      priceUnit: service.priceUnit,
-      scheduledDate: booking.scheduledDate.toISOString(),
-      status: booking.status,
-    },
-  };
 }
 
 /**

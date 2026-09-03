@@ -132,7 +132,15 @@ const getAIChatResponse = async (req, res) => {
     return res.status(400).json({ message: 'Please provide a question.' });
   }
 
-  // ── Tier 1: Gemini (try multiple models) ──
+  // ── Tier 1: Groq (fast + reliable) ──
+  try {
+    const text = await tryGroq(prompt);
+    return res.json({ text, provider: 'groq' });
+  } catch (groqError) {
+    console.log('[AI] Groq failed:', groqError.message);
+  }
+
+  // ── Tier 2: Gemini (fallback) ──
   if (geminiKey) {
     try {
       const text = await tryGemini(prompt, geminiKey);
@@ -140,14 +148,6 @@ const getAIChatResponse = async (req, res) => {
     } catch (error) {
       console.log('[AI] All Gemini models exhausted');
     }
-  }
-
-  // ── Tier 2: Groq ──
-  try {
-    const text = await tryGroq(prompt);
-    return res.json({ text, provider: 'groq' });
-  } catch (groqError) {
-    console.log('[AI] Groq failed:', groqError.message);
   }
 
   // ── Tier 3: Smart offline response ──
