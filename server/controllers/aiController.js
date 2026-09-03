@@ -15,9 +15,8 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // ── Model list: try multiple models in case one is rate-limited ──
 const GEMINI_MODELS = [
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash',
-  'gemini-2.0-flash',
+  'gemini-3.6-flash-lite',
+  'gemini-3.6-flash',
 ];
 
 // Primary: Try Gemini with multiple model fallbacks

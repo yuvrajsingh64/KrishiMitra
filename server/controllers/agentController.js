@@ -133,7 +133,7 @@ async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
-  const model = 'gemini-2.0-flash';
+  const model = 'gemini-3.6-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   // Build contents array with conversation history
@@ -201,14 +201,13 @@ async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) 
         responseData = { type: 'refund', refund: result.refund };
       }
 
-      // Add model's function call and our response to contents
-      contents.push({
-        role: 'model',
-        parts: [{ functionCall: { name, args: args || {} } }],
-      });
+      // Add model's exact response (which includes functionCall and possible thought_signature)
+      contents.push(candidate.content);
+      const formattedResponse = Array.isArray(result) ? { items: result } : (result || { status: 'success' });
+
       contents.push({
         role: 'user',
-        parts: [{ functionResponse: { name, response: result } }],
+        parts: [{ functionResponse: { name, response: formattedResponse } }],
       });
 
       // Continue loop — model may want to call another tool or respond
