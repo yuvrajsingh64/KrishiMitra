@@ -239,17 +239,32 @@ export default function Chatbot() {
     }
   };
 
-  // Simple markdown-like rendering for bold text
+  // Render inline parts: bold + clickable URLs
+  const renderInline = (str) => {
+    // Split on bold markers and URLs
+    const parts = str.split(/(\*\*.*?\*\*|https?:\/\/[^\s)]+)/g);
+    return parts.map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j} className="font-semibold">{part.slice(2, -2)}</strong>;
+      }
+      if (/^https?:\/\//.test(part)) {
+        return (
+          <a key={j} href={part} target="_blank" rel="noopener noreferrer"
+            className="text-emerald-400 underline break-all hover:text-emerald-300">
+            {part.length > 45 ? part.slice(0, 45) + '…' : part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
+  // Simple markdown-like rendering for bold text + links
   const renderText = (text) => {
     if (!text) return null;
     return text.split('\n').map((line, i) => (
       <span key={i}>
-        {line.split(/(\*\*.*?\*\*)/).map((part, j) => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={j} className="font-semibold">{part.slice(2, -2)}</strong>;
-          }
-          return part;
-        })}
+        {renderInline(line)}
         {i < text.split('\n').length - 1 && <br />}
       </span>
     ));
