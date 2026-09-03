@@ -154,20 +154,34 @@ async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) 
   const MAX_ITERATIONS = 5;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'qwen/qwen3.8-27b',
-      messages,
-      tools: TOOLS,
-      tool_choice: 'auto',
-      max_tokens: 1200,
-      temperature: 0.7,
-    }, {
-      headers: {
-        'Authorization': `Bearer ${groqKey}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000,
-    });
+    // Retry Groq call up to 2 times on transient errors
+    let response;
+    for (let retry = 0; retry < 2; retry++) {
+      try {
+        response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+          model: 'qwen/qwen3.8-27b',
+          messages,
+          tools: TOOLS,
+          tool_choice: 'auto',
+          max_tokens: 1200,
+          temperature: 0.7,
+        }, {
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        });
+        break; // success
+      } catch (apiErr) {
+        console.error(`[Agent] Groq attempt ${retry + 1} failed:`, apiErr.response?.status || apiErr.message);
+        if (retry === 0) {
+          await new Promise(r => setTimeout(r, 1000)); // wait 1s before retry
+        } else {
+          throw apiErr; // give up after 2nd attempt
+        }
+      }
+    }
 
     const choice = response.data?.choices?.[0];
     const assistantMessage = choice?.message;
