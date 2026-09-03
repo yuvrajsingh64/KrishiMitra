@@ -317,9 +317,20 @@ const agentChat = async (req, res) => {
     });
   } catch (error) {
     console.error('[Agent] Error:', error.response?.data || error.message);
-    return res.status(500).json({
-      message: 'The AI agent encountered an error. Please try again.',
-      error: error.message,
+
+    // Return a friendly response instead of 500 so the chat doesn't show a scary error
+    const friendlyMsg = error.response?.status === 429
+      ? "I'm getting too many requests right now. Please wait a few seconds and try again."
+      : error.response?.status === 503
+      ? "The AI service is temporarily unavailable. Please try again in a moment."
+      : "I'm having a temporary issue. Could you please try your request again?";
+
+    return res.json({
+      text: `⚠️ ${friendlyMsg}`,
+      toolCalls: [],
+      data: null,
+      provider: 'groq',
+      durationMs: Date.now() - startTime,
     });
   }
 };
