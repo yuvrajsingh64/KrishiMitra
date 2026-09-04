@@ -105,7 +105,7 @@ IMPORTANT RULES:
 - ALWAYS ask for confirmation before booking a service or processing a payment. Say something like "Should I proceed with booking [service] for ₹[amount] on [date]?"
 - ALWAYS ask for confirmation before processing a refund.
 - When presenting services, format them clearly with title, price, location, and rating.
-- When a payment link is created, prominently display it so the farmer can click and pay.
+- When a payment link is created by create_payment_link, ALWAYS include the exact link URL returned by the tool using markdown: [Pay Now](URL) or [Pay ₹amount – Service](URL). NEVER invent or fabricate payment links yourself.
 - Keep responses conversational, helpful, and concise.
 - If you can't find services, suggest the farmer try different search terms or check back later.
 - For non-farming questions, politely redirect to agriculture topics.
@@ -154,34 +154,47 @@ async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) 
   const MAX_ITERATIONS = 5;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    // Retry Groq call up to 2 times on transient errors
+    // Try multiple Groq models with instant fallback on rate limits (each model has separate quota)
     let response;
-    for (let retry = 0; retry < 2; retry++) {
-      try {
-        response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-          model: 'qwen/qwen3.8-27b',
-          messages,
-          tools: TOOLS,
-          tool_choice: 'auto',
-          max_tokens: 1200,
-          temperature: 0.7,
-        }, {
-          headers: {
-            'Authorization': `Bearer ${groqKey}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000,
-        });
-        break; // success
-      } catch (apiErr) {
-        console.error(`[Agent] Groq attempt ${retry + 1} failed:`, apiErr.response?.status || apiErr.message);
-        if (retry === 0) {
-          await new Promise(r => setTimeout(r, 1000)); // wait 1s before retry
-        } else {
-          throw apiErr; // give up after 2nd attempt
+    const MODELS = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
+    let lastErr;
+
+    for (let round = 0; round < 2 && !response; round++) {
+      for (const model of MODELS) {
+        try {
+          response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+            model,
+            messages,
+            tools: TOOLS,
+            tool_choice: 'auto',
+            max_tokens: 1200,
+            temperature: 0.7,
+          }, {
+            headers: {
+              'Authorization': `Bearer ${groqKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+          });
+          lastErr = null;
+          break; // success
+        } catch (apiErr) {
+          lastErr = apiErr;
+          const status = apiErr.response?.status;
+          console.error(`[Agent] ${model} attempt failed: ${status || apiErr.message}`);
+          // On 429 rate-limit, switch to next model immediately (separate quota pool)
+          if (status !== 429) {
+            await new Promise(r => setTimeout(r, 300));
+          }
         }
       }
+      // If round 1 failed across all models, wait 1.5s before round 2
+      if (!response && round === 0) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
     }
+
+    if (!response && lastErr) throw lastErr;
 
     const choice = response.data?.choices?.[0];
     const assistantMessage = choice?.message;

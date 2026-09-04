@@ -30,29 +30,42 @@ function ServiceCard({ service }) {
 }
 
 function PaymentLinkCard({ paymentLink }) {
+  if (!paymentLink) return null;
+  const url = typeof paymentLink === 'string' ? paymentLink : (paymentLink.url || paymentLink.short_url);
+  const amount = typeof paymentLink === 'object' ? paymentLink.amount : null;
+  const service = typeof paymentLink === 'object' ? paymentLink.service : null;
+  const provider = typeof paymentLink === 'object' ? paymentLink.provider : null;
+  const isDemo = typeof paymentLink === 'object' && paymentLink.mode === 'demo';
+
+  if (!url) return null;
+
   return (
-    <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl p-4 border border-emerald-500/30">
+    <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl p-4 border border-emerald-500/30 my-2 shadow-lg">
       <div className="flex items-center gap-2 mb-2">
         <CreditCard size={16} className="text-emerald-400" />
         <span className="text-sm font-semibold text-emerald-300">Payment Ready</span>
       </div>
-      <div className="text-xs text-slate-300 mb-1">
-        {paymentLink.service} • {paymentLink.provider}
-      </div>
-      <div className="text-lg font-bold text-white mb-3">
-        ₹{paymentLink.amount}
-      </div>
+      {service && (
+        <div className="text-xs text-slate-300 mb-1">
+          {service} {provider ? `• ${provider}` : ''}
+        </div>
+      )}
+      {amount && (
+        <div className="text-lg font-bold text-white mb-3">
+          ₹{amount}
+        </div>
+      )}
       <a
-        href={paymentLink.url}
+        href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+        className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md cursor-pointer"
       >
         <CreditCard size={14} />
         Pay Now
         <ExternalLink size={12} />
       </a>
-      {paymentLink.mode === 'demo' && (
+      {isDemo && (
         <p className="text-xs text-amber-400 mt-2 text-center">Demo Mode</p>
       )}
     </div>
@@ -251,22 +264,57 @@ export default function Chatbot() {
     }
   };
 
-  // Render inline parts: bold + clickable URLs
+  // Render inline parts: markdown links [text](url) + bold **text** + raw URLs
   const renderInline = (str) => {
-    // Split on bold markers and URLs
-    const parts = str.split(/(\*\*.*?\*\*|https?:\/\/[^\s)]+)/g);
+    if (!str) return null;
+    // Regex matches: [label](url), or **bold**, or raw http(s) URL
+    const regex = /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|\*\*.*?\*\*|https?:\/\/[^\s)]+)/g;
+    const parts = str.split(regex);
+
     return parts.map((part, j) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={j} className="font-semibold">{part.slice(2, -2)}</strong>;
-      }
-      if (/^https?:\/\//.test(part)) {
+      if (!part) return null;
+
+      // 1. Markdown link: [Title](url)
+      const mdMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+      if (mdMatch) {
+        const label = mdMatch[1];
+        const url = mdMatch[2];
         return (
-          <a key={j} href={part} target="_blank" rel="noopener noreferrer"
-            className="text-emerald-400 underline break-all hover:text-emerald-300">
-            {part.length > 45 ? part.slice(0, 45) + '…' : part}
+          <a
+            key={j}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold text-xs rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer no-underline"
+          >
+            <span>💳 {label}</span>
+            <ExternalLink size={12} className="shrink-0" />
           </a>
         );
       }
+
+      // 2. Bold text: **text**
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j} className="font-semibold text-slate-100">{part.slice(2, -2)}</strong>;
+      }
+
+      // 3. Raw URL: https://...
+      if (/^https?:\/\//.test(part)) {
+        const cleanUrl = part.replace(/[.,;]+$/, '');
+        return (
+          <a
+            key={j}
+            href={cleanUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 underline underline-offset-2 break-all font-medium cursor-pointer"
+          >
+            <span>{cleanUrl.length > 35 ? cleanUrl.slice(0, 35) + '…' : cleanUrl}</span>
+            <ExternalLink size={11} className="shrink-0 inline" />
+          </a>
+        );
+      }
+
       return part;
     });
   };
