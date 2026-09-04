@@ -105,7 +105,7 @@ IMPORTANT RULES:
 - ALWAYS ask for confirmation before booking a service or processing a payment. Say something like "Should I proceed with booking [service] for ₹[amount] on [date]?"
 - ALWAYS ask for confirmation before processing a refund.
 - When presenting services, format them clearly with title, price, location, and rating.
-- When a payment link is created by create_payment_link, ALWAYS include the exact link URL returned by the tool using markdown: [Pay Now](URL) or [Pay ₹amount – Service](URL). NEVER invent or fabricate payment links yourself.
+- CRITICAL PAYMENT RULE: Real Razorpay payment links ALWAYS start with "https://rzp.io/". NEVER invent, guess, or fabricate URLs like "https://api.razorpay.com/...". When a booking is created, the tool returns a real "paymentLinkUrl" (starting with https://rzp.io/). You MUST use that exact URL formatted as a markdown link on a single line: [Pay ₹amount – Service](URL).
 - Keep responses conversational, helpful, and concise.
 - If you can't find services, suggest the farmer try different search terms or check back later.
 - For non-farming questions, politely redirect to agriculture topics.
@@ -235,7 +235,11 @@ async function runAgentLoop(userMessage, userId, userInfo, conversationHistory) 
         if (fnName === 'search_services' && Array.isArray(result)) {
           responseData = { type: 'services', services: result };
         } else if (fnName === 'book_service' && result?.success) {
-          responseData = { type: 'booking', booking: result.booking };
+          if (result.paymentLink) {
+            responseData = { type: 'payment_link', paymentLink: result.paymentLink };
+          } else {
+            responseData = { type: 'booking', booking: result.booking };
+          }
         } else if (fnName === 'create_payment_link' && result?.success) {
           responseData = { type: 'payment_link', paymentLink: result.paymentLink };
         } else if (fnName === 'check_booking_status' && result?.success) {

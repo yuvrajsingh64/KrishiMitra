@@ -267,8 +267,8 @@ export default function Chatbot() {
   // Render inline parts: markdown links [text](url) + bold **text** + raw URLs
   const renderInline = (str) => {
     if (!str) return null;
-    // Regex matches: [label](url), or **bold**, or raw http(s) URL
-    const regex = /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|\*\*.*?\*\*|https?:\/\/[^\s)]+)/g;
+    // Regex matches: [label](url), or **bold**, or (http(s)://...), or raw http(s) URL
+    const regex = /(\[[^\]]+\]\([^\s)]+\)|\*\*.*?\*\*|\(?https?:\/\/[^\s)]+\)?)/g;
     const parts = str.split(regex);
 
     return parts.map((part, j) => {
@@ -298,19 +298,20 @@ export default function Chatbot() {
         return <strong key={j} className="font-semibold text-slate-100">{part.slice(2, -2)}</strong>;
       }
 
-      // 3. Raw URL: https://...
-      if (/^https?:\/\//.test(part)) {
-        const cleanUrl = part.replace(/[.,;]+$/, '');
+      // 3. Raw URL or URL in parens: (https://...) or https://...
+      const urlMatch = part.match(/^\(?(https?:\/\/[^\s)]+)\)?$/);
+      if (urlMatch) {
+        const cleanUrl = urlMatch[1].replace(/[.,;]+$/, '');
         return (
           <a
             key={j}
             href={cleanUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 underline underline-offset-2 break-all font-medium cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold text-xs rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer no-underline"
           >
-            <span>{cleanUrl.length > 35 ? cleanUrl.slice(0, 35) + '…' : cleanUrl}</span>
-            <ExternalLink size={11} className="shrink-0 inline" />
+            <span>💳 Pay Here ({cleanUrl.length > 30 ? cleanUrl.slice(0, 30) + '…' : cleanUrl})</span>
+            <ExternalLink size={12} className="shrink-0 inline" />
           </a>
         );
       }
@@ -320,8 +321,15 @@ export default function Chatbot() {
   };
 
   // Simple markdown-like rendering for bold text + links
-  const renderText = (text) => {
-    if (!text) return null;
+  const renderText = (rawText) => {
+    if (!rawText) return null;
+    // 1. Join any markdown links split across newlines: [title]\n(url) -> [title](url)
+    // 2. Strip any leaked debug context
+    const text = rawText
+      .replace(/\]\s*\n+\s*\(/g, '](')
+      .replace(/\n*\[CONTEXT FOR NEXT TURN[\s\S]*$/i, '')
+      .trim();
+
     return text.split('\n').map((line, i) => (
       <span key={i}>
         {renderInline(line)}

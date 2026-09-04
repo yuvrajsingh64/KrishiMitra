@@ -1,5 +1,6 @@
 const Service = require('../models/Service');
 const Booking = require('../models/Booking');
+const { createPaymentLink } = require('./paymentTools');
 
 /**
  * Search services in the database by keyword, category, and location.
@@ -88,6 +89,20 @@ async function bookService({ serviceId, farmerId, scheduledDate, notes }) {
       paymentStatus: 'pending',
     });
 
+    // Automatically generate Razorpay payment link for instant checkout
+    let paymentLinkData = null;
+    try {
+      const plResult = await createPaymentLink({
+        bookingId: booking._id.toString(),
+        farmerName: 'Farmer',
+      });
+      if (plResult.success) {
+        paymentLinkData = plResult.paymentLink;
+      }
+    } catch (plErr) {
+      console.error('[bookService] Auto payment link failed:', plErr.message);
+    }
+
     return {
       success: true,
       booking: {
@@ -98,7 +113,9 @@ async function bookService({ serviceId, farmerId, scheduledDate, notes }) {
         priceUnit: service.priceUnit,
         scheduledDate: booking.scheduledDate.toISOString(),
         status: booking.status,
+        paymentLinkUrl: paymentLinkData?.url || null,
       },
+      paymentLink: paymentLinkData,
     };
   } catch (err) {
     console.error('[bookService] Error:', err.message);
